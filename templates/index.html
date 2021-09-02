@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+{% if name %}
+<h1>Hello there, {{ name }}!</h1>
+{% else %}
+<h1>Hello, World!</h1>
+{% endif %}
+
+
+<h1>Available requirement sets</h1>
+<ul>
+    {% for set in requirement_sets %}
+    <li><a href="{{ set.url }}">{{ set.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}

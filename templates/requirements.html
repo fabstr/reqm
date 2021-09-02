@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>{{ requirement_set.name }}</h1>
+<table class="table table-striped" id="requirement_table">
+    <thead>
+        <tr>
+            <th>Requirement</th>
+            <th>Edit</th>
+            <th>Link to</th>
+            <th>Link from</th>
+            <th>Copy id</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in requirement_set.requirements %}
+        <tr id="row-{{r.id}}">
+            <td>
+                <a name="{{ r.id }}"></a>
+                <div id="view-{{ r.id }}">
+                    {{ r.contents }}
+                </div>
+                <div id="edit-{{ r.id }}" style="display: none;">
+                    <form>
+                        <div class="form-group">
+                            <label for="{{ r.id }}-contents">Contents</label>
+                            <textarea class="form-control" id="{{ r.id }}-contents">{{ r.contents }}</textarea>
+                        </div>
+                        <button onclick="save_requirement('{{requirement_set.id}}', '{{ r.id }}')" class="btn btn-primary">Save</button>
+                    </form>
+                </div>
+            </td>
+            <td><a href="#" onclick="show_requirement_editing('{{r.id}}')"><i class="bi bi-pencil"></i></a></td>
+            <td><a href="#" onclick="link_to('{{requirement_set.id}}', '{{r.id}}')"><i class="bi bi-box-arrow-in-right"></i></a></td>
+            <td><a href="#" onclick="link_from('{{requirement_set.id}}', '{{r.id}}')"><i class="bi bi-box-arrow-up-right"></i></a></td>
+            <td><a href="#" onclick="copy_id('{{requirement_set.id}}', '{{r.id}}')"><i class="bi bi-eyedropper"></i></a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>New requirement</h2>
+<form>
+    <div class="form-group">
+        <label for="new-requirement-contents">Contents</label>
+        <textarea class="form-control" id="new-requirement-contents"></textarea>
+    </div>
+    <button onclick="new_requirement('{{requirement_set.id}}', '', '')" class="btn btn-primary">Add</button>
+</form>
+{% endblock %}
+
+
+{% block header %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js" integrity="sha256-T0Vest3yCU7pafRw9r+settMBX6JkKN06dqBnpQ8d30=" crossorigin="anonymous"></script>
+<script>
+    $(document).ready(() => {
+        $("#requirement_table tbody").sortable({
+            helper: (e, tr) => {
+                var $originals = tr.children();
+                var $helper = tr.clone();
+                $helper.children().each(function(index) {
+                    $(this).width($originals.eq(index).width())
+                });
+                return $helper;
+            },
+            stop: (e, ui) => {
+                const tr = ui.item;
+                const req_id = tr.attr('id').replace('row-', '')
+                const new_index = tr[0].rowIndex-1;
+                move_requirement('{{requirement_set.id}}', req_id, new_index);
+            },
+        }).disableSelection();
+
+        $("#requirement_set tbody").sortable({
+            distance: 5,
+            delay: 100,
+            opacity: 0.6,
+            cursor: 'move',
+            update: function() {}
+        });
+    });
+</script>
+
+{% endblock %}
