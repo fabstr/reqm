@@ -8,9 +8,10 @@ pytest = "*"
 
 [packages]
 flask = "*"
+markdown = "*"
 
 [requires]
 python_version = "3.9"
 
 [scripts]
-run = "python -m flask run"
+requiem = "python app.py C:/Users/Fabian/Sync/uv/reqm/database"

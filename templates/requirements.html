@@ -1,54 +1,196 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>{{ requirement_set.name }}</h1>
+
+<h1>{{ requirement_set.name}}</h1>
+<hr />
+
 <table class="table table-striped" id="requirement_table">
-    <thead>
-        <tr>
-            <th>Requirement</th>
-            <th>Edit</th>
-            <th>Link to</th>
-            <th>Link from</th>
-            <th>Copy id</th>
-        </tr>
-    </thead>
     <tbody>
         {% for r in requirement_set.requirements %}
-        <tr id="row-{{r.id}}">
+        <tr id="{{r.id}}" class="requirement-row">
             <td>
                 <a name="{{ r.id }}"></a>
-                <div id="view-{{ r.id }}">
-                    {{ r.contents }}
+                <div id="view-{{ r.id }}" class="col-md-12">
+                    {{ r.html | safe }}
                 </div>
-                <div id="edit-{{ r.id }}" style="display: none;">
-                    <form>
+                <div id="edit-{{ r.id }}" style="display: none;" class="col-md-12">
+                    <form action="/requirement_set/{{requirement_set.id}}/{{r.id}}" method="POST">
                         <div class="form-group">
                             <label for="{{ r.id }}-contents">Contents</label>
-                            <textarea class="form-control" id="{{ r.id }}-contents">{{ r.contents }}</textarea>
+                            <textarea class="form-control" name="contents" id="{{ r.id }}-contents">{{ r.contents }}</textarea>
                         </div>
-                        <button onclick="save_requirement('{{requirement_set.id}}', '{{ r.id }}')" class="btn btn-primary">Save</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="reset" class="btn btn-primary" onclick="hide_requirement_editing('{{r.id}}')">Cancel</button>
                     </form>
                 </div>
+                <div id="details-{{ r.id }}" style="display: none;" class="col-md-12">
+                    <hr />
+                    <b>Requirement details</b>
+                    <ul>
+                        {% if r.from_links %}
+                        <li>Links from this requirement
+                            <ul>
+                                {% for link in r.from_links %}
+                                <li><a href="/requirement_set/{{link.split(':')[0]}}#{{link.split(':')[1]}}">{{link}}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                        {% endif %}
+                        {% if r.to_links %}
+                        <li>Links to this requirement:
+                            <ul>
+                                {% for link in r.to_links %}
+                                <li><a href="/requirement_set/{{link.split(':')[0]}}#{{link.split(':')[1]}}">{{link}}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                        {% endif %}
+                        <li>Id: {{ r.id }}</li>
+                    </ul>
+                </div>
             </td>
-            <td><a href="#" onclick="show_requirement_editing('{{r.id}}')"><i class="bi bi-pencil"></i></a></td>
-            <td><a href="#" onclick="link_to('{{requirement_set.id}}', '{{r.id}}')"><i class="bi bi-box-arrow-in-right"></i></a></td>
-            <td><a href="#" onclick="link_from('{{requirement_set.id}}', '{{r.id}}')"><i class="bi bi-box-arrow-up-right"></i></a></td>
-            <td><a href="#" onclick="copy_id('{{requirement_set.id}}', '{{r.id}}')"><i class="bi bi-eyedropper"></i></a></td>
+            <td>
+                <div class="dropdown">
+                    <button title="Edit" onclick="show_requirement_editing('{{r.id}}')" class="btn bi bi-pencil"></button>
+                    <button title="Details" onclick="toggle_requirement_details('{{r.id}}')" class="btn bi bi-folder-plus"></button>
+                    <button class="btn dropdown-toggle bi bi-gear-wide-connected" type="button" id="actions-{{r.id}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                    <ul class="dropdown-menu" aria-labeledby="actions-{{r.id}}">
+                        <li class="dropdown-item">
+                            <button class="btn bi bi-arrow-bar-up" data-bs-toggle="modal" data-bs-target="#add-requirement-before-{{r.id}}">
+                                Add requirement before
+                            </button>
+                        </li>
+                        <li class="dropdown-item">
+                            <button class="btn bi bi-arrow-bar-down" data-bs-toggle="modal" data-bs-target="#add-requirement-after-{{r.id}}">
+                                Add requirement after
+                            </button>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider" />
+                        </li>
+                        <li class="dropdown-item">
+                            <button title="Copy id" onclick="copy_id('{{requirement_set.id}}', '{{r.id}}')" class="btn bi bi-eyedropper">
+                                Copy id
+                            </button>
+                        </li>
+                        <li class="dropdown-item">
+                            <button title="Link to" onclick="link_to('{{requirement_set.id}}', '{{r.id}}')" class="btn bi bi-box-arrow-in-right" data-bs-toggle="modal" data-bs-target="#link-modal">
+                                Link to
+                            </button>
+                        </li>
+                        <li class="dropdown-item">
+                            <button title="Link from" onclick="link_from('{{requirement_set.id}}', '{{r.id}}')" class="btn bi bi-box-arrow-up-right" data-bs-toggle="modal" data-bs-target="#link-modal">
+                                Link from
+                            </button>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider" />
+                        </li>
+                        <li class="dropdown-item">
+                            <form action="/requirement_set/{{requirement_set.id}}/{{r.id}}/remove" method="post">
+                                <button title="Remove" type="submit" class="btn bi bi-trash">
+                                    Remove
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+                {{ new_requirement_modal(r.id, mode='before') }}
+                {{ new_requirement_modal(r.id, mode='after') }}
+
+            </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
-<h2>New requirement</h2>
-<form>
-    <div class="form-group">
-        <label for="new-requirement-contents">Contents</label>
-        <textarea class="form-control" id="new-requirement-contents"></textarea>
+
+<div class="modal fade" id="link-modal" tabindex="-1" aria-labelledby="link-modal" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="linking-label">Requirement linking</h5>
+                <button type="reset" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="linking_direction_statement">Linking from/to this requirement:</h6>
+                <div id="requirement_html">(this is the requirement)</div>
+                <hr>
+                <div class="form-group">
+                    <label for="linked_requirement_set">Linked requirement set</label>
+                    <select class="form-select" name="linked_requirement_set" id="selected_linked_requirement_set" onchange="change_linked_requirement_set()">
+                        <option selected>Choose requirement set</option>
+                        {% for requirement_set in requirement_sets %}
+                        <option value="{{requirement_set.id}}">{{requirement_set.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <hr>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Requirement</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for current_requirement_set in requirement_sets %}
+                        {% for requirement in  current_requirement_set.requirements.requirements %}
+                        <tr class="linked_requirement_set requirement_set_{{current_requirement_set.id}}" style="display: none;">
+                            <td>
+                                {{requirement.html | safe}}
+                            </td>
+                            <td>
+                                <form class="form" id="linkform" action="/link" method="post">
+                                    <input type="hidden" name="direction" class="link_direction" value="" />
+                                    <input type="hidden" name="this_requirement_set_id" value="{{requirement_set.id}}" />
+                                    <input type="hidden" name="this_requirement_id" value="" class="this_requirement_value" />
+                                    <input type="hidden" name="that_requirement_set_id" value="{{current_requirement_set.id}}" />
+                                    <input type="hidden" name="that_requirement_id" value="{{requirement.id}}" />
+
+                                    <button type="submit" class="btn btn-secondary">Link</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="reset" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
     </div>
-    <button onclick="new_requirement('{{requirement_set.id}}', '', '')" class="btn btn-primary">Add</button>
-</form>
+</div>
+
+
+{{ new_requirement_modal('', 'last') }}
 {% endblock %}
 
+{% block sidebar%}
+<h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+    <span>Requirement set actions</span>
+</h6>
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="nav-link bi bi-plus" href=""  data-bs-toggle="modal" data-bs-target="#add-requirement-last-">
+            Add new requirement
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link bi bi-cast" href="/requirement_set/{{requirement_set.id}}/preview" target="blank"> Preview</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link bi bi-download" href="/requirement_set/{{requirement_set.id}}/markdown"> Export to markdown</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link bi bi-save" href=""> Tag version</a>
+    </li>
+</ul>
+{% endblock %}
 
 {% block header %}
 <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
@@ -83,3 +225,36 @@
 </script>
 
 {% endblock %}
+
+{% macro new_requirement_modal(req_id, mode='last') -%}
+<div class="modal fade" id="add-requirement-{{mode}}-{{req_id}}" tabindex="-1" aria-labelledby="add-requirement-{{mode}}-{{req_id}}" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form class="form" action="/requirement_set/{{requirement_set.id}}/add" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="{{req_id}}-new-requirement-Label">New requirement</h5>
+                    <button type="reset" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="new-requirement-contents">Contents</label>
+                        <textarea class="form-control" name="contents"></textarea>
+                    </div>
+                    {% if mode == 'before' %}
+                    <input type="hidden" name="before" value="{{req_id}}" />
+                    {% endif %}
+                    {% if mode == 'after' %}
+                    <input type="hidden" name="after" value="{{req_id}}" />
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add requirement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{%- endmacro %}
+
+

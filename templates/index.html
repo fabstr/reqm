@@ -1,16 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-{% if name %}
-<h1>Hello there, {{ name }}!</h1>
-{% else %}
-<h1>Hello, World!</h1>
-{% endif %}
-
-
-<h1>Available requirement sets</h1>
-<ul>
-    {% for set in requirement_sets %}
-    <li><a href="{{ set.url }}">{{ set.name }}</a></li>
-    {% endfor %}
-</ul>
+<h1>Welcome to Requiem!</h1>
+<p>Please choose a requirement set on the left, or press manage requirement sets to add a new one.</p>
 {% endblock %}

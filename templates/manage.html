@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Manage requirement sets</h1>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Rename</th>
+            <th>Remove</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for set in requirement_sets %}
+        <tr>
+            <td>{{ set.id }}</td>
+            <td>
+                <form class="form-inline" action="/requirement_set/{{ set.id }}/rename" method="post">
+                    <div class="input-group">
+                        <input type="text" class="form-control mb-2 mr-sm-2" value="{{ set.name }}" />
+                        <button type="submit" class="btn btn-primary mb-2">Rename</button>
+                    </div>
+                </form>
+            </td>
+            <td>
+                </form>
+                <form class="form form-inline" action="/requirement_set/{{ set.id }}/remove" method="post">
+                    <div class="input-group">
+                        <button type="submit" class="btn btn-primary {% if not set.canremove %} disabled {% endif %} mb-2">Remove</button>
+                    </div>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        
+    </tbody>
+</table>
+
+<p>Please note that a requirement set can only be removed when there are no links from or to its requirements.</p>
+
+<h2>New requirement set</h2>
+<form action="/requirement_set" method="post" class="form">
+    <div class="form-group">
+        <label for="new-req-set-name">Requirement set name</label>
+        <input type="text" class="form-control" name="name" id="new-req-set-name" />
+    </div>
+    <div class="form-group">
+        <label for="new-req-set-id">Requirement id</label>
+        <input type="text" class="form-control" name="id" id="new-req-id" />
+    </div>
+    <button type="submit" class="btn btn-primary">Add requirement set</button>
+</form>
+{% endblock %}
