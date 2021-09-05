@@ -31,3 +31,5 @@ Please do not point to an existing non-empty directory unless it is already
 an initialized database.
 
 
+## License
+Requiem is licensed under the [MIT License](LICENSE).
