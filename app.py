@@ -1,12 +1,13 @@
 import sys
-from requiem import requiem
+from requiem import requiem, db
 from flask import Flask, render_template, send_from_directory, url_for, request, redirect
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template('index.html', requirement_sets=requiem.get_requirement_sets())
+    database = db.Database()
+    return render_template('index.html', requirement_sets=requiem.get_requirement_sets(database))
 
 @app.route('/requirement_set/<set_id>/remove', methods=['POST'])
 def remove_requirement_set(set_id):
@@ -25,23 +26,22 @@ def add_requirement_set():
 
 @app.route('/requirement_set/<set_id>')
 def requirement_set(set_id):
-    index = requiem.get_index_file()
-    sets = index.get('requirement_sets')
-    req_set = requiem.RequirementSet.get_by_id(set_id)
+    database = db.Database()
+    req_set = requiem.RequirementSet(database, set_id)
     return render_template('requirements.html', 
             requirement_set=req_set.get_requirements(with_html=True),
-            requirement_sets=requiem.get_requirement_sets()
+            requirement_sets=requiem.get_requirement_sets(database)
     )
 
 @app.route('/manage')
 def manage_requirement_sets():
-    index = requiem.get_index_file()
-    sets = index.get('requirement_sets')
-    return render_template('manage.html', requirement_sets=requiem.get_requirement_sets())
+    database = db.Database()
+    return render_template('manage.html', requirement_sets=requiem.get_requirement_sets(database))
 
 @app.route('/requirement_set/<set_id>/markdown')
 def export_requirement_set(set_id):
-    req_set = requiem.RequirementSet.get_by_id(set_id)
+    database = db.Database()
+    req_set = requiem.RequirementSet(database, set_id)
     text = req_set.export()
     return text, 200, {
             'Content-Type': 'text/markdown',
@@ -50,25 +50,29 @@ def export_requirement_set(set_id):
 
 @app.route('/requirement_set/<set_id>/preview')
 def preview_requirement_set(set_id):
-    req_set = requiem.RequirementSet.get_by_id(set_id)
+    database = db.Database()
+    req_set = requiem.RequirementSet(database, set_id)
     return req_set.export(target='html')
 
 @app.route('/requirement_set/<set_id>/<req_id>', methods=['POST'])
 def update_requirement(set_id, req_id):
-    req_set = requiem.RequirementSet.get_by_id(set_id)
+    database = db.Database()
+    req_set = requiem.RequirementSet(database, set_id)
     req_set.update_requirement(req_id, request.form.get('contents'))
     return redirect(url_for('requirement_set', set_id=set_id, _anchor=req_id))
 
 @app.route('/requirement_set/<set_id>/<req_id>/remove', methods=['POST'])
 def remove_requirement(set_id, req_id):
-    req_set = requiem.RequirementSet.get_by_id(set_id)
+    database = db.Database()
+    req_set = requiem.RequirementSet(database, set_id)
     req_set.remove_requirement(req_id)
     return redirect(url_for('requirement_set', set_id=set_id))
 
 @app.route('/requirement_set/<set_id>/<req_id>/move', methods=['POST'])
 def move_requirement(set_id, req_id):
     index = request.get_json().get('index')
-    req_set = requiem.RequirementSet.get_by_id(set_id)
+    database = db.Database()
+    req_set = requiem.RequirementSet(database, set_id)
     req_set.move_requirement(req_id, index)
     return redirect(url_for('requirement_set', set_id=set_id, _anchor=req_id))
 
@@ -78,11 +82,13 @@ def add_requirement(set_id):
     after = request.form.get('after')
     contents = request.form.get('contents')
 
-    req_set = requiem.RequirementSet.get_by_id(set_id)
+    database = db.Database()
+    req_set = requiem.RequirementSet(database, set_id)
     req_id = req_set.add_requirement(contents, before=before, after=after)
 
     return redirect(url_for('requirement_set', set_id=set_id, _anchor=req_id))
 
+# TODO
 @app.route('/link', methods=['POST'])
 def link():
     direction = request.form.get('direction')

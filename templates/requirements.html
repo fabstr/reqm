@@ -209,7 +209,7 @@
             stop: (e, ui) => {
                 const tr = ui.item;
                 const req_id = tr.attr('id').replace('row-', '')
-                const new_index = tr[0].rowIndex-1;
+                const new_index = tr[0].rowIndex;
                 move_requirement('{{requirement_set.id}}', req_id, new_index);
             },
         }).disableSelection();

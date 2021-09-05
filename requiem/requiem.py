@@ -6,31 +6,25 @@ import json
 import os
 import uuid
 import markdown
+from pprint import pprint
 from flask import url_for
 from .db import Database
 
 INDEX_FILE_NAME = 'index.json'
 
 
-def get_database_path():
-    if len(sys.argv) < 2:
-        raise ValueError('Usage: requiem path/to/database/directory')
-    return os.path.join(
-            os.path.dirname(sys.argv[0]),
-            sys.argv[1])
 
 
-def get_requirement_sets(with_requirements=True):
-    db = Database(get_database_path())
+def get_requirement_sets(database, with_requirements=False):
     return [
             {
                 'id': s.get('id'),
                 'url': url_for('requirement_set', set_id=s.get('id')),
                 'name': s.get('name'),
                 'canremove': False,
-                'requirements': RequirementSet.get_by_id(s.get('id')).get_requirements(with_html=True) if with_requirements else []
+                'requirements': RequirementSet(database, s.get('id')).get_requirements(with_html=True) if with_requirements else []
             }
-            for s in db.get_requirement_sets()
+            for s in database.get_requirement_sets()
     ]
 
 
@@ -40,12 +34,10 @@ def get_index_file():
         index = json.load(f)
         return index
 
-def make_requirement(contents, from_links=[], to_links=[]):
+def make_requirement(contents):
     return {
         'id': str(uuid.uuid4()),
-        'contents': contents,
-        'from_links': from_links,
-        'to_links': to_links
+        'contents': contents
     }
 
 def is_database(path):
@@ -114,87 +106,66 @@ def add_requirement_set(name, set_id):
     subprocess.run(['git', 'commit', '-m', 'Create requirement set {}'.format(name)], cwd=database_path)
 
 class RequirementSet:
-    _requirement_set = None
-    _database_path = None
-    _filename = None
+    _set_id = None
+    _database = None
 
-    def __init__(self, database_path, filename):
-        self._database_path = database_path
-        self._filename = filename
-        with open(os.path.join(self._database_path, self._filename)) as f:
-            self._requirement_set = json.load(f)
+    def __init__(self, database, set_id):
+        self._database = database
+        self._set_id = set_id
 
     def get_requirements(self, with_html=False):
+        requirement_set = self._database.get_requirement_set(self._set_id)
+        requirement_set['requirements'] = self._database.get_requirements(self._set_id)
+
         if with_html:
-            for requirement in self._requirement_set.get('requirements'):
+            for requirement in requirement_set.get('requirements'):
                 requirement['html'] = markdown.markdown(requirement.get('contents'))
 
-        return self._requirement_set
-
-    def get_by_id(requirement_set_id):
-        for req_set in get_index_file().get('requirement_sets'):
-            if req_set.get('id') == requirement_set_id:
-                return RequirementSet(get_database_path(), req_set.get('filename'))
-
-        raise ValueError('Requirement set with id {} not found.'.format(requirement_set_id))
-
-
+        return requirement_set
 
     def move_requirement(self, requirement_id, index):
-        for idx, value in enumerate(self._requirement_set.get('requirements')):
-            if value.get('id') == requirement_id:
-                self._requirement_set.get('requirements').remove(value)
-                break
-
-        self._requirement_set.get('requirements').insert(index, value)
-        self.save(comment='Move requirement {} to index {}'.format(requirement_id, index))
+        self._database.move_requirement(self._set_id, requirement_id, index)
 
     def remove_requirement(self, requirement_id):
-        for idx, value in enumerate(self._requirement_set.get('requirements')):
-            if value.get('id') == requirement_id:
-                self._requirement_set.get('requirements').remove(value)
+        self._database.remove_requirement(self._set_id, requirement_id)
 
-        self.save(comment='Remove requirement {}'.format(requirement_id))
 
     def update_requirement(self, requirement_id, contents):
-        for value in self._requirement_set.get('requirements'):
-            if value.get('id') == requirement_id:
-                value['contents'] = contents
-                break
-        self.save(comment='Update requirement {}'.format(requirement_id))
+        self._database.update_requirement(self._set_id, requirement_id, contents)
 
     def add_requirement(self, contents, before=None, after=None):
-        new_requrement = make_requirement(contents)
+        new_requirement = make_requirement(contents)
 
+        # TODO
         index = None
         if before:
-            for idx, value in enumerate(self._requirement_set.get('requirements')):
-                if value.get('id') == before:
-                    index = idx
-                    break
+            raise NotImplementedError('before not implemented again yet')
+            #for idx, value in enumerate(self._requirement_set.get('requirements')):
+                #if value.get('id') == before:
+                    #index = idx
+                    #break
 
+        # TODO
         if after:
-            for idx, value in enumerate(self._requirement_set.get('requirements')):
-                if value.get('id') == after:
-                    index = idx + 1
-                    break
-        if not before and not after:
-            index = len(self._requirement_set.get('requirements'))
+            raise NotImplementedError('after not implemented again yet')
+            #for idx, value in enumerate(self._requirement_set.get('requirements')):
+                #if value.get('id') == after:
+                    #index = idx + 1
+                    #break
 
-        if index == None:
-            raise ValueError('Could not find requirement, before={}, after={}'.format(before, after))
+        pprint(new_requirement)
+        self._database.insert_requirement(self._set_id, new_requirement.get('id'), new_requirement.get('contents'))
 
-        self._requirement_set.get('requirements').insert(index, new_requrement)
-
-        if before != '' or after != '':
+        if (before and before != '') or (after and after != ''):
             indexmsg = ' at index {}'.format(index)
         else:
             indexmsg = ''
-        self.save('Add new requirement {}{}'.format(new_requrement.get('id'), indexmsg))
+        self._database.save('Add new requirement {}{}'.format(new_requirement.get('id'), indexmsg))
       
 
-        return new_requrement.get('id')
+        return new_requirement.get('id')
 
+    # TODO
     def add_from_link(self, requirement_id, to_id):
         # link from a requirement in this set to another
         for r in self._requirement_set.get('requirements'):
@@ -203,6 +174,7 @@ class RequirementSet:
                     r.get('from_links').append(to_id)
         self.save('Add link from {} to {}'.format(requirement_id, to_id))
 
+    # TODO
     def add_to_link(self, requirement_id, from_id):
         # link to a requirement in this set from another
         for r in self._requirement_set.get('requirements'):
@@ -211,25 +183,21 @@ class RequirementSet:
                     r.get('to_links').append(from_id)
         self.save('Add link to {} from {}'.format(requirement_id, from_id))
 
+    # TODO remove
     def save(self, comment=None, tag=None):
-        filename = os.path.join(self._database_path, self._filename)
-        with open(filename, 'w') as f:
-            json.dump(self._requirement_set, f, indent=4)
+        raise Exception('don\'t use me! Use database instead.')
 
-        if comment:
-            subprocess.run(['git', 'add', self._filename], cwd=self._database_path)
-            subprocess.run(['git', 'commit', '-m', comment], cwd=self._database_path)
-
-        if tag:
-            print('WARNING! tag not implemented yet')
-
+    # TODO
     def metadata(self):
         return {
-            'Title': self._requirement_set.get('name')
+            'Title': self.get_requirements().get('name')
         }
 
     def export(self, target='markdown'):
-        text = '\n'.join([r.get('contents') + '\n' for r in self._requirement_set.get('requirements')])
+        text = '\n'.join([
+            r.get('contents') + '\n' 
+            for r in self.get_requirements().get('requirements')
+        ])
         if target == 'markdown':
             return text
         if target == 'html':
