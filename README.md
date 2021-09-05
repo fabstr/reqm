@@ -10,6 +10,8 @@ use tool and the requirement files are both machine and human readable.
 Git is used as the version control tool and requirements are stored in human
 readable json files.
 
+The name is a play on REQUIrement Management.
+
 ## Development and dunning
 Pipenv is used. 
 
