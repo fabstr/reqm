@@ -1,3 +1,4 @@
+import sqlite3
 import subprocess
 import re
 import sys
@@ -6,23 +7,10 @@ import os
 import uuid
 import markdown
 from flask import url_for
+from .db import Database
 
 INDEX_FILE_NAME = 'index.json'
 
-
-def get_requirement_sets(with_requirements=True):
-    index = get_index_file()
-    sets = index.get('requirement_sets')
-    return [
-            {
-                'id': s.get('id'),
-                'url': url_for('requirement_set', set_id=s.get('id')),
-                'name': s.get('name'),
-                'canremove': False,
-                'requirements': RequirementSet.get_by_id(s.get('id')).get_requirements(with_html=True) if with_requirements else []
-            }
-            for s in sets
-    ]
 
 def get_database_path():
     if len(sys.argv) < 2:
@@ -31,18 +19,26 @@ def get_database_path():
             os.path.dirname(sys.argv[0]),
             sys.argv[1])
 
+
+def get_requirement_sets(with_requirements=True):
+    db = Database(get_database_path())
+    return [
+            {
+                'id': s.get('id'),
+                'url': url_for('requirement_set', set_id=s.get('id')),
+                'name': s.get('name'),
+                'canremove': False,
+                'requirements': RequirementSet.get_by_id(s.get('id')).get_requirements(with_html=True) if with_requirements else []
+            }
+            for s in db.get_requirement_sets()
+    ]
+
+
 def get_index_file():
     indexfile = os.path.join(get_database_path(), INDEX_FILE_NAME)
     with open(indexfile) as f:
         index = json.load(f)
         return index
-
-def get_requirement_set_filename(set_id):
-    for set in get_index_file().get('requirement_sets'):
-        if set.get('id') == set_id:
-            return os.path.join(get_database_path(), set.get('name') + '.json')
-
-    return None
 
 def make_requirement(contents, from_links=[], to_links=[]):
     return {
@@ -80,6 +76,7 @@ def initialise_database(path):
     print('Database initialised')
 
 
+# TODO
 def add_requirement_set(name, set_id):
     database_path = get_database_path()
 
