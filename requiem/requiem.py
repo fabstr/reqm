@@ -165,24 +165,6 @@ class RequirementSet:
 
         return new_requirement.get('id')
 
-    # TODO
-    def add_from_link(self, requirement_id, to_id):
-        # link from a requirement in this set to another
-        for r in self._requirement_set.get('requirements'):
-            if r.get('id') == requirement_id:
-                if to_id not in r.get('from_links'):
-                    r.get('from_links').append(to_id)
-        self.save('Add link from {} to {}'.format(requirement_id, to_id))
-
-    # TODO
-    def add_to_link(self, requirement_id, from_id):
-        # link to a requirement in this set from another
-        for r in self._requirement_set.get('requirements'):
-            if r.get('id') == requirement_id:
-                if from_id not in r.get('to_links'):
-                    r.get('to_links').append(from_id)
-        self.save('Add link to {} from {}'.format(requirement_id, from_id))
-
     # TODO remove
     def save(self, comment=None, tag=None):
         raise Exception('don\'t use me! Use database instead.')

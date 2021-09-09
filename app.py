@@ -30,7 +30,7 @@ def requirement_set(set_id):
     req_set = requiem.RequirementSet(database, set_id)
     return render_template('requirements.html', 
             requirement_set=req_set.get_requirements(with_html=True),
-            requirement_sets=requiem.get_requirement_sets(database)
+            requirement_sets=requiem.get_requirement_sets(database, with_requirements=True)
     )
 
 @app.route('/manage')
@@ -88,7 +88,6 @@ def add_requirement(set_id):
 
     return redirect(url_for('requirement_set', set_id=set_id, _anchor=req_id))
 
-# TODO
 @app.route('/link', methods=['POST'])
 def link():
     direction = request.form.get('direction')
@@ -105,16 +104,10 @@ def link():
     else:
         raise ValueError('Invalid direction {}'.format(direction))
 
-    print(request.form)
-
-    from_requirement_set = requiem.RequirementSet.get_by_id(from_req_set_id)
-    combined_from_link = from_req_set_id + ':' + from_req_id
-
-    to_requirement_set = requiem.RequirementSet.get_by_id(to_req_set_id)
-    combined_to_link = to_req_set_id + ':' + to_req_id
-
-    from_requirement_set.add_from_link(from_req_id, combined_to_link)
-    to_requirement_set.add_to_link(to_req_id, combined_from_link)
+    database = db.Database()
+    database.insert_link(from_req_set_id, from_req_id, to_req_set_id, to_req_id)
+    database.save('Add link from {}:{} to {}:{}'.format(
+        from_req_set_id, from_req_id, to_req_set_id, to_req_id))
 
     return redirect(url_for('requirement_set', 
         set_id=request.form.get('this_requirement_set_id'),
