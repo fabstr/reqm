@@ -77,13 +77,23 @@ class Database:
         index_filename = os.path.join(self._database_path, INDEX_FILE_NAME)
         with open(index_filename) as f:
             index = json.load(f)
-        for requirement_set in index.get('requirement_sets'):
-            statement = """
-            INSERT INTO requirement_sets (id, name, filename, placement_order)
-            VALUES (:id, :name, :filename, :placement_order);
-            """
-            requirement_set['placement_order'] = self.get_set_number()
-            self._cursor.execute(statement, requirement_set)
+        for req_set in index.get('requirement_sets'):
+            self.insert_requirement_set(req_set.get('id'), req_set.get('name'), req_set.get('filename'), save=False)
+
+    def insert_requirement_set(self, set_id, name, filename, save=True):
+        statement = """
+        INSERT INTO requirement_sets (id, name, filename, placement_order)
+        VALUES (:id, :name, :filename, :placement_order)
+        """
+        args = {
+                'id': set_id,
+                'name': name,
+                'filename': filename,
+                'placement_order': self.get_set_number()
+        }
+        self._cursor.execute(statement, args)
+        if save:
+            self.save('Add requirment set {} {}'.format(set_id, name))
 
     def insert_link(self, from_requirement_set_id, from_requirement_id, to_requirement_set_id, to_requirement_id, save=True):
         statement = """
@@ -268,7 +278,11 @@ class Database:
             if with_link_contents:
                 raise NotImplementedError('links with contents not implemented yet')
                 requirement['to_link_contents'] = {}
-        requirements.append(requirement)
+
+        # when there are no requirments in the set we don't want to add an empty
+        # dict
+        if len(requirement) > 0:
+            requirements.append(requirement)
 
         return requirements
 

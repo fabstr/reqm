@@ -12,9 +12,6 @@ from .db import Database
 
 INDEX_FILE_NAME = 'index.json'
 
-
-
-
 def get_requirement_sets(database, with_requirements=False):
     return [
             {
@@ -70,40 +67,12 @@ def initialise_database(path):
 
 # TODO
 def add_requirement_set(name, set_id):
-    database_path = get_database_path()
-
     if not re.match(r'[A-Za-z0-9_ -]+', name):
         raise ValueError('Invalid requirement set name \'{}\'. Valid characters are: space, underscore, dash, A-Z, a-z, and 0-9.'.format(name))
 
-    requirement_set_filename = '{}.json'.format(name)
-    requirement_set = {
-        'name': name,
-        'id': set_id,
-        'requirements': []
-    }
-
-    index_entry = {
-        'id': set_id,
-        'name': name,
-        'filename': requirement_set_filename
-    }
-
-    # add it to the index
-    with open(os.path.join(database_path, INDEX_FILE_NAME)) as f:
-        index = json.load(f)
-    for r in index.get('requirement_sets'):
-        if r.get('id') == set_id:
-            raise ValueError('Requirement set id {} already exists.'.format(set_id))
-    index.get('requirement_sets').append(index_entry)
-    with open(os.path.join(database_path, INDEX_FILE_NAME), 'w') as f:
-        json.dump(index, f, indent=4)
-
-    # add the requirement set file
-    with open(os.path.join(database_path, requirement_set_filename), 'w') as f:
-        json.dump(requirement_set, f, indent=4)
-
-    subprocess.run(['git', 'add', INDEX_FILE_NAME, requirement_set_filename], cwd=database_path)
-    subprocess.run(['git', 'commit', '-m', 'Create requirement set {}'.format(name)], cwd=database_path)
+    filename = '{}.json'.format(name)
+    database = Database()
+    database.insert_requirement_set(set_id, name, filename, save=True)
 
 class RequirementSet:
     _set_id = None
@@ -119,7 +88,8 @@ class RequirementSet:
 
         if with_html:
             for requirement in requirement_set.get('requirements'):
-                requirement['html'] = markdown.markdown(requirement.get('contents'))
+                if requirement:
+                    requirement['html'] = markdown.markdown(requirement.get('contents'))
 
         return requirement_set
 
