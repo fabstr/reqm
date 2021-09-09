@@ -106,8 +106,6 @@ def link():
 
     database = db.Database()
     database.insert_link(from_req_set_id, from_req_id, to_req_set_id, to_req_id)
-    database.save('Add link from {}:{} to {}:{}'.format(
-        from_req_set_id, from_req_id, to_req_set_id, to_req_id))
 
     return redirect(url_for('requirement_set', 
         set_id=request.form.get('this_requirement_set_id'),

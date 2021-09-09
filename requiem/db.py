@@ -85,7 +85,7 @@ class Database:
             requirement_set['placement_order'] = self.get_set_number()
             self._cursor.execute(statement, requirement_set)
 
-    def insert_link(self, from_requirement_set_id, from_requirement_id, to_requirement_set_id, to_requirement_id):
+    def insert_link(self, from_requirement_set_id, from_requirement_id, to_requirement_set_id, to_requirement_id, save=True):
         statement = """
         INSERT INTO links (
             from_set_id, 
@@ -110,7 +110,11 @@ class Database:
             'to_id': to_requirement_id,
             'placement_order': self.get_link_number()
         }
-        return self._cursor.execute(statement, args)
+        if save:
+            self.save('Add link from {}:{} to {}:{}'.format(
+                from_req_set_id, from_req_id, to_req_set_id, to_req_id))
+
+        self._cursor.execute(statement, args)
 
     def insert_requirement(self, set_id, requirement_id, contents):
         statement = """
@@ -157,11 +161,11 @@ class Database:
                 # links
                 for link in requirement.get('from_links'):
                     to_requirement_set_id, to_requirement_id = link.split(':')
-                    self.insert_link(set_id, requirement.get('id'), to_requirement_set_id, to_requirement_id)
+                    self.insert_link(set_id, requirement.get('id'), to_requirement_set_id, to_requirement_id, save=False)
 
                 for link in requirement.get('to_links'):
                     from_requirement_set_id, from_requirement_id = link.split(':')
-                    self.insert_link(from_requirement_set_id, from_requirement_id, set_id, requirement.get('id'))
+                    self.insert_link(from_requirement_set_id, from_requirement_id, set_id, requirement.get('id'), save=False)
 
             # read metadata
             for key, value in requirement_set.items():
@@ -268,16 +272,18 @@ class Database:
 
         return requirements
 
-    def remove_requirement(self, set_id, req_id):
+    def remove_requirement(self, set_id, req_id, save=True):
         statement = 'DELETE FROM requirements WHERE set_id = :set_id AND id = :req_id'
         self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id})
-        self.save('Remove requirement {}'.format(req_id))
+        if save:
+            self.save('Remove requirement {}'.format(req_id))
 
 
-    def update_requirement(self, set_id, req_id, contents):
+    def update_requirement(self, set_id, req_id, contents, save=True):
         statement = 'UPDATE requirements SET value=:value WHERE set_id=:set_id AND id=:req_id AND key=:key'
         self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id, 'key': 'contents', 'value': contents})
-        self.save('Update requirement {}'.format(req_id))
+        if save:
+            self.save('Update requirement {}'.format(req_id))
 
     
     # This function is a bit tricky and it's very likely the exact numbering of 
@@ -286,18 +292,21 @@ class Database:
     # the requirements. This holds for this implementation of the movement.
     # Also, the specific placement older numbers do not matter as they only 
     # exist in the in-memory database.
-    def move_requirement(self, set_id, req_id, new_index):
+    def move_requirement(self, set_id, req_id, new_index, placement_order=None, save=True):
         # first find old placement_order
         statement = 'SELECT placement_order FROM requirements WHERE set_id = :set_id and id = :req_id'
         self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id})
-        (old_placement_order) = self._cursor.fetchone()[0]
+        old_placement_order = self._cursor.fetchone()[0]
 
-        # find the first placement order in the set, can then calculate the new placement order
-        # since new_index is the same as the offset from the beginning of the set
-        statement = 'SELECT placement_order FROM requirements WHERE set_id = :set_id ORDER BY placement_order ASC LIMIT 1'
-        self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id})
-        first_placement_order = self._cursor.fetchone()[0]
-        new_placement_order = first_placement_order + new_index
+        if placement_order:
+            new_placement_order = placement_order
+        else:
+            # find the first placement order in the set, can then calculate the new placement order
+            # since new_index is the same as the offset from the beginning of the set
+            statement = 'SELECT placement_order FROM requirements WHERE set_id = :set_id ORDER BY placement_order ASC LIMIT 1'
+            self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id})
+            first_placement_order = self._cursor.fetchone()[0]
+            new_placement_order = first_placement_order + new_index
 
         if old_placement_order < new_placement_order:
             # moved down
@@ -317,8 +326,14 @@ class Database:
         statement = 'UPDATE requirements SET placement_order = :new_placement_order WHERE set_id = :set_id and id = :req_id'
         self._cursor.execute(statement, {'new_placement_order': new_placement_order, 'set_id': set_id, 'req_id': req_id})
 
-        self.save(comment='Move requirement {} to index {}'.format(req_id, new_index))
+        if save:
+            self.save(comment='Move requirement {} to index {}'.format(req_id, new_index))
 
+    def find_requirement_placement_order(self, set_id, req_id):
+        statement = 'SELECT placement_order FROM requirements WHERE set_id = :set_id and id = :req_id'
+        self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id})
+        placement_order = self._cursor.fetchone()[0]
+        return placement_order
 
     def save(self, comment):
         # save index

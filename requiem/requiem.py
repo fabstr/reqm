@@ -136,38 +136,20 @@ class RequirementSet:
     def add_requirement(self, contents, before=None, after=None):
         new_requirement = make_requirement(contents)
 
-        # TODO
-        index = None
+        placement_order = None
         if before:
-            raise NotImplementedError('before not implemented again yet')
-            #for idx, value in enumerate(self._requirement_set.get('requirements')):
-                #if value.get('id') == before:
-                    #index = idx
-                    #break
+            placement_order = self._database.find_requirement_placement_order(self._set_id, before)
+        elif after:
+            placement_order = self._database.find_requirement_placement_order(self._set_id, after) + 1
 
-        # TODO
-        if after:
-            raise NotImplementedError('after not implemented again yet')
-            #for idx, value in enumerate(self._requirement_set.get('requirements')):
-                #if value.get('id') == after:
-                    #index = idx + 1
-                    #break
-
-        pprint(new_requirement)
         self._database.insert_requirement(self._set_id, new_requirement.get('id'), new_requirement.get('contents'))
 
-        if (before and before != '') or (after and after != ''):
-            indexmsg = ' at index {}'.format(index)
-        else:
-            indexmsg = ''
-        self._database.save('Add new requirement {}{}'.format(new_requirement.get('id'), indexmsg))
-      
+        if before or after:
+            self._database.move_requirement(self._set_id, new_requirement.get('id'), new_index=None, placement_order=placement_order, save=False)
+
+        self._database.save('Add new requirement {}'.format(new_requirement.get('id')))
 
         return new_requirement.get('id')
-
-    # TODO remove
-    def save(self, comment=None, tag=None):
-        raise Exception('don\'t use me! Use database instead.')
 
     # TODO
     def metadata(self):
