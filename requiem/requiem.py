@@ -64,10 +64,21 @@ def initialise_database(path):
     subprocess.run(['git', 'commit', '-m', 'Initialise database'], cwd=path)
     print('Database initialised')
 
+def rename_requirement_set(set_id, new_name, old_name):
+    if not validate_name(new_name) or not validate_name(old_name):
+        raise ValueError('Invalid requirement set name \'{}\'. Valid characters are: space, underscore, dash, A-Z, a-z, and 0-9.'.format(name))
 
-# TODO
+    filename = '{}.json'.format(new_name)
+    old_filename = '{}.json'.format(old_name)
+    database = Database()
+    database.rename_requirement_set(set_id, new_name, filename, old_filename)
+
+def validate_name(name):
+    return re.match(r'[A-Za-z0-9_ -]+', name)
+
+
 def add_requirement_set(name, set_id):
-    if not re.match(r'[A-Za-z0-9_ -]+', name):
+    if not validate_name(name):
         raise ValueError('Invalid requirement set name \'{}\'. Valid characters are: space, underscore, dash, A-Z, a-z, and 0-9.'.format(name))
 
     filename = '{}.json'.format(name)

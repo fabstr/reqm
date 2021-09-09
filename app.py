@@ -15,7 +15,10 @@ def remove_requirement_set(set_id):
 
 @app.route('/requirement_set/<set_id>/rename', methods=['POST'])
 def rename_requirement_set(set_id):
-    raise NotImplementedError('Renaming requirement sets is not implemented yet.')
+    new_name = request.form.get('name')
+    old_name = request.form.get('old_name')
+    requiem.rename_requirement_set(set_id, new_name, old_name)
+    return redirect(url_for('manage_requirement_sets'))
 
 @app.route('/requirement_set', methods=['POST'])
 def add_requirement_set():

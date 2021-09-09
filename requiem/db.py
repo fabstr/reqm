@@ -179,7 +179,7 @@ class Database:
 
             # read metadata
             for key, value in requirement_set.items():
-                if key == 'requirements':
+                if key in ['name', 'filename', 'requirements']:
                     continue
                 self.insert_requirement_set_metadata(set_id, key, value)
 
@@ -348,6 +348,14 @@ class Database:
         self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id})
         placement_order = self._cursor.fetchone()[0]
         return placement_order
+
+    def rename_requirement_set(self, set_id, new_name, new_filename, old_filename, save=True):
+        statement = 'UPDATE requirement_sets SET name=:name, filename=:filename WHERE id=:id'
+        self._cursor.execute(statement, {'name': new_name, 'filename': new_filename, 'id': set_id})
+        subprocess.run(['git', 'mv', old_filename, new_filename], cwd=self._database_path)
+        if save:
+            self.save('Rename requirement set {} to {}'.format(set_id, new_name))
+
 
     def save(self, comment):
         # save index

@@ -17,7 +17,8 @@
             <td>
                 <form class="form-inline" action="/requirement_set/{{ set.id }}/rename" method="post">
                     <div class="input-group">
-                        <input type="text" class="form-control mb-2 mr-sm-2" value="{{ set.name }}" />
+                        <input type="hidden" name="old_name" value="{{ set.name }}" />
+                        <input type="text" name="name" class="form-control mb-2 mr-sm-2" value="{{ set.name }}" />
                         <button type="submit" class="btn btn-primary mb-2">Rename</button>
                     </div>
                 </form>
