@@ -93,7 +93,7 @@ class RequirementSet:
         self._database = database
         self._set_id = set_id
 
-    def get_requirements(self, with_html=False):
+    def get_requirements(self, with_html=False, with_link_contents=False):
         requirement_set = self._database.get_requirement_set(self._set_id)
         requirement_set['requirements'] = self._database.get_requirements(self._set_id)
 
@@ -101,6 +101,22 @@ class RequirementSet:
             for requirement in requirement_set.get('requirements'):
                 if requirement:
                     requirement['html'] = markdown.markdown(requirement.get('contents'))
+
+        if with_link_contents:
+            print("hej")
+            for requirement in requirement_set.get('requirements'):
+                for key, val in enumerate(requirement.get('to_links')):
+                    (set_id, req_id) = val.split(':')
+                    linked_requirement = self._database.get_requirement(set_id, req_id)
+                    if with_html:
+                        linked_requirement['contents'] = markdown.markdown(linked_requirement.get('contents'))
+                    requirement.get('to_links')[key] = linked_requirement
+                for key, val in enumerate(requirement.get('from_links')):
+                    (set_id, req_id) = val.split(':')
+                    linked_requirement = self._database.get_requirement(set_id, req_id)
+                    if with_html:
+                        linked_requirement['contents'] = markdown.markdown(linked_requirement.get('contents'))
+                    requirement.get('from_links')[key] = linked_requirement
 
         return requirement_set
 
@@ -139,9 +155,35 @@ class RequirementSet:
         }
 
     def export(self, target='markdown'):
+        def show_details(r):
+            return not re.match(r'^\s*#', r.get('contents'))
+
+        def append_link_contents(lines, link):
+            (set_id, req_id) = link.split(':')
+            linked_requirement = self._database.get_requirement(set_id, req_id)
+            contents = linked_requirement.get('contents')
+            if target == 'html':
+                contents = markdown.markdown(contents)
+            lines.append('*{}* {}'.format(link, contents))
+
+        def get_line(r):
+            lines = []
+            lines.append(r.get('contents'))
+            if show_details(r):
+                lines.append('*Id:* {}'.format(r.get('id')))
+                if len(r.get('from_links')) > 0:
+                    lines.append('*From links:*')
+                    for link in r.get('from_links'):
+                        append_link_contents(lines, link)
+                if len(r.get('to_links')) > 0:
+                    lines.append('*To links:*')
+                    for link in r.get('to_links'):
+                        append_link_contents(lines, link)
+            lines.append('* * * ')
+            return '\n\n'.join(lines)
         text = '\n'.join([
-            r.get('contents') + '\n' 
-            for r in self.get_requirements().get('requirements')
+            get_line(r) + '\n'
+            for r in self.get_requirements(with_html=False).get('requirements')
         ])
         if target == 'markdown':
             return text

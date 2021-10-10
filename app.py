@@ -32,7 +32,7 @@ def requirement_set(set_id):
     database = db.Database()
     req_set = requiem.RequirementSet(database, set_id)
     return render_template('requirements.html', 
-            requirement_set=req_set.get_requirements(with_html=True),
+            requirement_set=req_set.get_requirements(with_html=True, with_link_contents=True),
             requirement_sets=requiem.get_requirement_sets(database, with_requirements=True)
     )
 

@@ -95,7 +95,7 @@ class Database:
         if save:
             self.save('Add requirment set {} {}'.format(set_id, name))
 
-    def insert_link(self, from_requirement_set_id, from_requirement_id, to_requirement_set_id, to_requirement_id, save=True):
+    def insert_link(self, from_req_set_id, from_req_id, to_req_set_id, to_req_id, save=True):
         statement = """
         INSERT INTO links (
             from_set_id, 
@@ -114,17 +114,19 @@ class Database:
         ON CONFLICT DO NOTHING;
         """
         args = {
-            'from_set_id': from_requirement_set_id,
-            'from_id': from_requirement_id,
-            'to_set_id': to_requirement_set_id,
-            'to_id': to_requirement_id,
+            'from_set_id': from_req_set_id,
+            'from_id': from_req_id,
+            'to_set_id': to_req_set_id,
+            'to_id': to_req_id,
             'placement_order': self.get_link_number()
         }
+
+        self._cursor.execute(statement, args)
+
         if save:
             self.save('Add link from {}:{} to {}:{}'.format(
                 from_req_set_id, from_req_id, to_req_set_id, to_req_id))
 
-        self._cursor.execute(statement, args)
 
     def insert_requirement(self, set_id, requirement_id, contents):
         statement = """
@@ -238,7 +240,27 @@ class Database:
                 in self._cursor.fetchall()
         ]
 
-    def get_requirements(self, set_id, with_link_contents=False):
+
+    def get_requirement(self, set_id, req_id):
+        statement = """
+        SELECT key, value
+        FROM requirements
+        WHERE set_id = :set_id AND id = :req_id
+        """
+        self._cursor.execute(statement, {'set_id': set_id, 'req_id': req_id})
+        rows = self._cursor.fetchall()
+        requirement = {
+            'id': req_id,
+            'set_id': set_id
+        }
+        for row in rows:
+            (key, value) = row
+            requirement[key] = value
+
+        return requirement
+
+
+    def get_requirements(self, set_id):
         requirements = []
 
         statement = """
@@ -274,10 +296,6 @@ class Database:
                 '{}:{}'.format(link.get('from_set_id'), link.get('from_id'))
                 for link in links if link.get('to_id') == req_id
             ]
-
-            if with_link_contents:
-                raise NotImplementedError('links with contents not implemented yet')
-                requirement['to_link_contents'] = {}
 
         # when there are no requirments in the set we don't want to add an empty
         # dict

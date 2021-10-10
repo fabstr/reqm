@@ -27,26 +27,33 @@
                 <div id="details-{{ r.id }}" style="display: none;" class="col-md-12">
                     <hr />
                     <b>Requirement details</b>
-                    <ul>
+                    <p>Id: {{ r.id }}</p>
                         {% if r.from_links %}
-                        <li>Links from this requirement
-                            <ul>
+                        <p>Links from this requirement</p>
+                        <table class="table table-bordered">
+                            <tbody>
                                 {% for link in r.from_links %}
-                                <li><a href="/requirement_set/{{link.split(':')[0]}}#{{link.split(':')[1]}}">{{link}}</a></li>
+                                <tr>
+                                    <td><a href="/requirement_set/{{link.set_id}}#{{link.id}}">{{link.set_id}}:{{link.id}}</a></td>
+                                    <td>{{link.contents | safe}}</td>
+                                </tr>
                                 {% endfor %}
-                            </ul>
-                        </li>
+                            </tbody>
+                        </table>
                         {% endif %}
                         {% if r.to_links %}
-                        <li>Links to this requirement:
-                            <ul>
+                        <p>Links to this requirement:</p>
+                        <table class="table table-bordered">
+                            <tbody>
                                 {% for link in r.to_links %}
-                                <li><a href="/requirement_set/{{link.split(':')[0]}}#{{link.split(':')[1]}}">{{link}}</a></li>
+                                <tr>
+                                    <td><a href="/requirement_set/{{link.set_id}}#{{link.id}}">{{link.set_id}}:{{link.id}}</a></td>
+                                    <td>{{link.contents | safe}}</td>
+                                </tr>
                                 {% endfor %}
-                            </ul>
-                        </li>
+                            </tbody>
+                        </table>
                         {% endif %}
-                        <li>Id: {{ r.id }}</li>
                     </ul>
                 </div>
             </td>
