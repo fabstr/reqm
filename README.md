@@ -12,7 +12,7 @@ readable json files.
 
 The name is a play on REQUIrement Management.
 
-## Development and dunning
+## Development and running
 Pipenv is used. 
 
 To install dependencies, clone the repo and run
